@@ -10,7 +10,17 @@ export default async function Bikes({ searchParams }: { searchParams: Promise<{ 
     .select("id, maker, model, year, cc, style, status, is_sale, is_sold, views, custom_point, profiles!bikes_owner_id_fkey(nickname)")
     .order("created_at", { ascending: false });
 
-  const liveBikes = error || !data ? [] : data.map((b: any) => ({
+  const bikeRows = error || !data ? [] : data;
+  const ids = bikeRows.map((b: any) => b.id);
+  const { data: photoRows } = ids.length > 0
+    ? await supabase.from("bike_photos").select("bike_id, storage_path").in("bike_id", ids).eq("sort_order", 0)
+    : { data: [] as { bike_id: string; storage_path: string }[] };
+
+  const thumbnailByBike = new Map(
+    (photoRows ?? []).map((p) => [p.bike_id, supabase.storage.from("bike-photos").getPublicUrl(p.storage_path).data.publicUrl]),
+  );
+
+  const liveBikes = bikeRows.map((b: any) => ({
     id: b.id,
     maker: b.maker,
     model: b.model,
@@ -23,9 +33,10 @@ export default async function Bikes({ searchParams }: { searchParams: Promise<{ 
     views: b.views,
     owner: b.profiles?.nickname ?? "unknown",
     customPoint: b.custom_point ?? "",
+    thumbnailUrl: thumbnailByBike.get(b.id),
   }));
 
-  const bikes = [...liveBikes, ...bikeFiles];
+  const bikes = [...liveBikes, ...bikeFiles.map((b) => ({ ...b, thumbnailUrl: undefined as string | undefined }))];
 
   return <main className="subPage"><header className="subHeader"><a className="brand" href="/">CUSTOM BIKE FILE</a><a href="/post">＋ バイクを投稿</a></header><section className="catalog"><p className="eyebrow">BIKE FILES</p><h1>バイクを探す</h1><p className="intro">メーカー、排気量、車種、現在の状態から探せます。ノーマル車も、カスタム途中の一台も掲載できます。</p><BikeSearchGrid bikes={bikes} initialMaker={params.maker ?? ""} initialCc={params.cc ?? ""} initialKeyword={params.keyword ?? ""}/></section></main>;
 }

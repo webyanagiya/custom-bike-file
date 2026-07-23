@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { bikeFiles, statusLabel, BikeStatus } from "./data";
 import { createClient } from "../lib/supabase/client";
@@ -17,7 +17,7 @@ export function MakerSearchInput({makers,defaultValue=""}:{makers:string[],defau
   </>;
 }
 
-export function BikeSearchGrid({bikes=bikeFiles,initialMaker="",initialCc="",initialKeyword=""}:{bikes?:typeof bikeFiles,initialMaker?:string,initialCc?:string,initialKeyword?:string}){
+export function BikeSearchGrid({bikes=bikeFiles,initialMaker="",initialCc="",initialKeyword=""}:{bikes?:((typeof bikeFiles)[number]&{thumbnailUrl?:string})[],initialMaker?:string,initialCc?:string,initialKeyword?:string}){
   const [maker,setMaker]=useState(initialMaker);
   const [cc,setCc]=useState(initialCc);
   const [keyword,setKeyword]=useState(initialKeyword);
@@ -42,20 +42,19 @@ export function BikeSearchGrid({bikes=bikeFiles,initialMaker="",initialCc="",ini
       <select value={status} onChange={e=>setStatus(e.target.value)}><option value="">すべての状態</option><option value="normal">ノーマル車</option><option value="progress">カスタム途中</option><option value="full">フルカスタム</option></select>
     </div>
     <p className="resultCount">{filtered.length}台見つかりました</p>
-    <div className="grid">{filtered.map((b,i)=><BikeCard key={b.id} bike={b} index={i}/>)}</div>
+    <div className="grid">{filtered.map((b,i)=><BikeCard key={b.id} bike={b} index={i} thumbnailUrl={b.thumbnailUrl}/>)}</div>
   </>;
 }
 
 export function BikeCard({bike,index=0,thumbnailUrl}:{bike:(typeof bikeFiles)[number],index?:number,thumbnailUrl?:string}){
-  const meta=[bike.year,bike.cc,bike.style].filter(Boolean).join(" / ");
-  return <article className="card">
-    <a href={`/bikes/${bike.id}`} className={`photo ${thumbnailUrl?"has-photo":"no-photo"}`}>
+  return <a href={`/bikes/${bike.id}`} className="card">
+    <div className={`photo ${thumbnailUrl?"has-photo":"no-photo"}`}>
       {thumbnailUrl?<img src={thumbnailUrl} alt="" className="realPhoto"/>:<div className="noImageLabel">NO IMAGE</div>}
       <span className={`statusTag ${bike.status}`}>{statusLabel[bike.status]}</span>
       {(bike.sale||bike.sold)&&<div className="cornerTags">{bike.sale&&<b className="saleTag">売ります</b>}{bike.sold&&<b className="soldTag">SOLD</b>}</div>}
-    </a>
-    <div className="cardBody"><p>{bike.maker}</p><h3><a href={`/bikes/${bike.id}`}>{bike.model}</a></h3><small>{meta||"-"}</small></div>
-  </article>;
+    </div>
+    <div className="cardBody"><p>{bike.maker}</p><h3>{bike.model}</h3></div>
+  </a>;
 }
 
 export function MyBikeCard({bike,index=0}:{bike:(typeof bikeFiles)[number],index?:number}){
@@ -111,21 +110,60 @@ export function FavoriteButton({id}:{id:string}){
   return <button className="favoriteButton" onClick={toggle}>{fav?"♥ お気に入り済み":"♡ お気に入り"}</button>;
 }
 
-export function Gallery(){
-  const [selected,setSelected]=useState(0); const [showAll,setShowAll]=useState(false);
-  const photos=Array.from({length:18},(_,i)=>i);
-  return <div className="gallery"><div className={`detailMainPhoto photo photo${(selected%6)+1}`}><em>PHOTO {selected+1}</em></div><div className="thumbGrid">{photos.slice(0,showAll?30:12).map(i=><button aria-label={`写真${i+1}`} className={`thumb photo photo${(i%6)+1} ${selected===i?"active":""}`} key={i} onClick={()=>setSelected(i)} />)}</div>{!showAll&&<button className="moreButton" onClick={()=>setShowAll(true)}>もっと見る（残り6枚）</button>}</div>
-}
-
 export function PhotoGallery({photos}:{photos:string[]}){
   const [selected,setSelected]=useState(0);
+  const [lightboxOpen,setLightboxOpen]=useState(false);
+  const touchStartX=useRef<number|null>(null);
+
+  function go(delta:number){
+    setSelected(current=>(current+delta+photos.length)%photos.length);
+  }
+  function handleTouchStart(e:React.TouchEvent){
+    touchStartX.current=e.touches[0].clientX;
+  }
+  function handleTouchEnd(e:React.TouchEvent){
+    if(touchStartX.current===null) return;
+    const deltaX=e.changedTouches[0].clientX-touchStartX.current;
+    if(Math.abs(deltaX)>40) go(deltaX<0?1:-1);
+    touchStartX.current=null;
+  }
+
+  useEffect(()=>{
+    if(!lightboxOpen) return;
+    function handleKey(e:KeyboardEvent){
+      if(e.key==="Escape") setLightboxOpen(false);
+      if(e.key==="ArrowRight") go(1);
+      if(e.key==="ArrowLeft") go(-1);
+    }
+    window.addEventListener("keydown",handleKey);
+    return ()=>window.removeEventListener("keydown",handleKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[lightboxOpen,photos.length]);
+
   if(photos.length===0){
     return <div className="gallery"><div className="detailMainPhoto"><em>写真はまだありません</em></div></div>;
   }
-  return <div className="gallery">
-    <div className="detailMainPhoto"><img src={photos[selected]} alt={`写真${selected+1}`} className="realPhoto"/></div>
-    <div className="thumbGrid">{photos.map((url,i)=><button key={url} aria-label={`写真${i+1}`} className={`thumb ${selected===i?"active":""}`} onClick={()=>setSelected(i)}><img src={url} alt="" className="realPhoto"/></button>)}</div>
-  </div>;
+
+  return <>
+    <div className="gallery">
+      <div className="detailMainPhoto photo has-photo" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        <img src={photos[selected]} alt={`写真${selected+1}`} className="realPhoto" onClick={()=>setLightboxOpen(true)}/>
+        {photos.length>1&&<>
+          <button type="button" aria-label="前の写真" className="galleryArrow galleryArrowPrev" onClick={()=>go(-1)}>‹</button>
+          <button type="button" aria-label="次の写真" className="galleryArrow galleryArrowNext" onClick={()=>go(1)}>›</button>
+        </>}
+      </div>
+      <div className="thumbGrid">{photos.map((url,i)=><button key={url} aria-label={`写真${i+1}`} className={`thumb ${selected===i?"active":""}`} onClick={()=>setSelected(i)}><img src={url} alt="" className="realPhoto"/></button>)}</div>
+    </div>
+    {lightboxOpen&&<div className="lightbox" onClick={()=>setLightboxOpen(false)} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <button type="button" aria-label="閉じる" className="lightboxClose" onClick={()=>setLightboxOpen(false)}>×</button>
+      <img src={photos[selected]} alt={`写真${selected+1}`} className="lightboxImage" onClick={e=>e.stopPropagation()}/>
+      {photos.length>1&&<>
+        <button type="button" aria-label="前の写真" className="galleryArrow galleryArrowPrev" onClick={e=>{e.stopPropagation();go(-1);}}>‹</button>
+        <button type="button" aria-label="次の写真" className="galleryArrow galleryArrowNext" onClick={e=>{e.stopPropagation();go(1);}}>›</button>
+      </>}
+    </div>}
+  </>;
 }
 
 export function BikeStatusFields({value,onChange}:{value:BikeStatus,onChange:(status:BikeStatus)=>void}){

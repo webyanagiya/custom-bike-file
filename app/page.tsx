@@ -76,9 +76,10 @@ export default async function Home() {
 
       <section className="hero">
         <div className="heroInner">
-          <p className="eyebrow">CUSTOM BIKE ENCYCLOPEDIA</p>
-          <h1>CUSTOM BIKE FILEは、日本中のカスタムバイクを集めた、<br />改造好きのための参考書・図鑑です。</h1>
-          <p className="lead">こだわりを、記録に残しませんか？</p>
+          <p className="eyebrow">CUSTOM BIKE GALLERY</p>
+          <h1>日本最大級のカスタムバイクギャラリーを目指しています。</h1>
+          <p className="lead">あなたの一台が、このギャラリーをつくります。</p>
+          <p className="heroDescription">全国のライダーが愛車を記録し、<br />つながる場所。</p>
           <div className="heroActions">
             <a className="primary buttonLink" href="/bikes">カスタムバイクを見る</a>
             <a className="secondary buttonLink" href="/post">自分のバイクを投稿する</a>

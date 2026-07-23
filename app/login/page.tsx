@@ -22,7 +22,7 @@ export default function LoginPage() {
       setMessage("ログインに失敗しました。メールアドレスとパスワードを確認してください。");
       return;
     }
-    router.push("/post");
+    router.push("/mypage");
     router.refresh();
   }
 
@@ -38,7 +38,7 @@ export default function LoginPage() {
           <button className="primary" type="submit" disabled={submitting}>{submitting ? "ログイン中…" : "ログインする"}</button>
         </form>
         {message && <p className="formMessage">{message}</p>}
-        <p>アカウントをお持ちでない方は <a href="/profile">無料登録へ</a></p>
+        <p>アカウントをお持ちでない方は <a href="/signup">無料登録へ</a></p>
       </section>
     </main>
   );
