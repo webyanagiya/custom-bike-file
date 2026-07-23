@@ -116,8 +116,8 @@ export function EditBikeForm({ bike, photos, userId }: { bike: BikeRecord; photo
       nextSortOrder += 1;
     }
 
-    setMessage("保存が完了しました。マイページへ移動します…");
-    router.push("/mypage");
+    setMessage("保存が完了しました。詳細ページへ移動します…");
+    router.push(`/bikes/${bike.id}`);
     router.refresh();
   }
 

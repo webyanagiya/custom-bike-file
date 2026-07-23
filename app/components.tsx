@@ -3,25 +3,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { bikeFiles, statusLabel, BikeStatus } from "./data";
 import { createClient } from "../lib/supabase/client";
+import { normalizeForMatch } from "../lib/textMatch";
 
-export function MakerSearchInput({makers,defaultValue=""}:{makers:string[],defaultValue?:string}){
-  const [query,setQuery]=useState(defaultValue);
-  const suggestions=useMemo(()=>{
-    if(!query) return [];
-    const q=query.toLowerCase();
-    return makers.filter(m=>m.toLowerCase().includes(q)).slice(0,8);
-  },[makers,query]);
-  return <>
-    <input name="maker" list="makerSuggestions" value={query} onChange={e=>setQuery(e.target.value)} placeholder="メーカー名で検索（例：kaw、duc）" autoComplete="off" />
-    <datalist id="makerSuggestions">{suggestions.map(m=><option key={m} value={m}/>)}</datalist>
-  </>;
-}
-
-export function BikeSearchGrid({bikes=bikeFiles,initialMaker="",initialCc="",initialKeyword=""}:{bikes?:((typeof bikeFiles)[number]&{thumbnailUrl?:string})[],initialMaker?:string,initialCc?:string,initialKeyword?:string}){
-  const [maker,setMaker]=useState(initialMaker);
+export function BikeSearchGrid({bikes=bikeFiles,initialCc="",initialKeyword="",initialStatus="",modelOptions=[]}:{bikes?:((typeof bikeFiles)[number]&{thumbnailUrl?:string})[],initialCc?:string,initialKeyword?:string,initialStatus?:string,modelOptions?:string[]}){
   const [cc,setCc]=useState(initialCc);
   const [keyword,setKeyword]=useState(initialKeyword);
-  const [status,setStatus]=useState("");
+  const [status,setStatus]=useState(initialStatus);
+  const suggestions=useMemo(()=>{
+    if(!keyword) return [];
+    const q=normalizeForMatch(keyword);
+    return modelOptions.filter(m=>normalizeForMatch(m).includes(q)).slice(0,8);
+  },[modelOptions,keyword]);
   const filtered=useMemo(()=>bikes.filter(b=>{
     const ccNum=parseInt(b.cc);
     const ccOk=!cc
@@ -30,15 +22,14 @@ export function BikeSearchGrid({bikes=bikeFiles,initialMaker="",initialCc="",ini
       ||(cc==="250"&&ccNum>=126&&ccNum<=250)
       ||(cc==="400"&&ccNum>=251&&ccNum<=400)
       ||(cc==="750"&&ccNum>=401&&ccNum<=750)
-      ||(cc==="900"&&ccNum>=751&&ccNum<=900)
-      ||(cc==="1000plus"&&ccNum>=901);
-    return (!maker||b.maker.toLowerCase().includes(maker.toLowerCase()))&&ccOk&&(!status||b.status===status)&&(!keyword||`${b.maker} ${b.model} ${b.style}`.toLowerCase().includes(keyword.toLowerCase()));
-  }),[bikes,maker,cc,keyword,status]);
+      ||(cc==="751plus"&&ccNum>=751);
+    return ccOk&&(!status||b.status===status)&&(!keyword||normalizeForMatch(`${b.maker} ${b.model} ${b.style}`).includes(normalizeForMatch(keyword)));
+  }),[bikes,cc,keyword,status]);
   return <>
     <div className="catalogSearch">
-      <select value={maker} onChange={e=>setMaker(e.target.value)}><option value="">すべてのメーカー</option>{[...new Set(bikes.map(b=>b.maker))].map(x=><option key={x}>{x}</option>)}</select>
-      <select value={cc} onChange={e=>setCc(e.target.value)}><option value="">すべての排気量</option><option value="50">50cc</option><option value="125">125cc</option><option value="250">250cc</option><option value="400">400cc</option><option value="750">750cc</option><option value="900">900cc</option><option value="1000plus">1000cc以上</option></select>
-      <input value={keyword} onChange={e=>setKeyword(e.target.value)} placeholder="車種名・ジャンルで検索" />
+      <input value={keyword} onChange={e=>setKeyword(e.target.value)} list="modelSuggestions" placeholder="車名で検索（例：CB、ZRX、ゼファー）" autoComplete="off" />
+      <datalist id="modelSuggestions">{suggestions.map(m=><option key={m} value={m}/>)}</datalist>
+      <select value={cc} onChange={e=>setCc(e.target.value)}><option value="">すべての排気量</option><option value="50">50cc以下</option><option value="125">51cc～125cc</option><option value="250">126cc～250cc</option><option value="400">251cc～400cc</option><option value="750">401cc～750cc</option><option value="751plus">751cc以上</option></select>
       <select value={status} onChange={e=>setStatus(e.target.value)}><option value="">すべての状態</option><option value="normal">ノーマル車</option><option value="progress">カスタム途中</option><option value="full">フルカスタム</option></select>
     </div>
     <p className="resultCount">{filtered.length}台見つかりました</p>

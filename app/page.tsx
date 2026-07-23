@@ -1,18 +1,17 @@
 import { bikeFiles, BikeStatus } from "./data";
-import { BikeCard, MakerSearchInput } from "./components";
+import { BikeCard } from "./components";
 import { InFeedAdSlot, SidebarAdSlot } from "./AdSlot";
 import { getActiveInFeedAd, getActiveSidebarAd } from "../lib/ads";
 import { createClient } from "../lib/supabase/server";
 
-const MAKERS = ["HONDA", "KAWASAKI", "YAMAHA", "SUZUKI", "HARLEY-DAVIDSON", "DUCATI", "BMW"];
+const POPULAR_MODELS = ["Z900RS", "CBX400F", "CB400SF", "ZRX400", "ゼファー400", "GS400", "XJR400", "SR400", "モンキー", "ハーレー"];
 const DISPLACEMENTS = [
-  { code: "50", label: "50cc" },
-  { code: "125", label: "125cc" },
-  { code: "250", label: "250cc" },
-  { code: "400", label: "400cc" },
-  { code: "750", label: "750cc" },
-  { code: "900", label: "900cc" },
-  { code: "1000plus", label: "1000cc以上" },
+  { code: "50", label: "50cc以下" },
+  { code: "125", label: "51cc～125cc" },
+  { code: "250", label: "126cc～250cc" },
+  { code: "400", label: "251cc～400cc" },
+  { code: "750", label: "401cc～750cc" },
+  { code: "751plus", label: "751cc以上" },
 ];
 
 export default async function Home() {
@@ -51,9 +50,6 @@ export default async function Home() {
 
   const bikes = [...liveBikes, ...bikeFiles.map((b) => ({ ...b, thumbnailUrl: undefined as string | undefined }))].slice(0, 6);
 
-  const { data: makerRows } = await supabase.from("bikes").select("maker");
-  const makerList = [...new Set([...(makerRows ?? []).map((r) => r.maker), ...bikeFiles.map((b) => b.maker)])].sort();
-
   const cards = bikes.map((bike, index) => (
     <BikeCard key={bike.id} bike={bike} index={index} thumbnailUrl={bike.thumbnailUrl} />
   ));
@@ -88,7 +84,6 @@ export default async function Home() {
       </section>
 
       <form className="searchPanel" aria-label="バイク検索" action="/bikes" method="get">
-        <MakerSearchInput makers={makerList} />
         <select name="cc" defaultValue="">
           <option value="">排気量</option>
           {DISPLACEMENTS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
@@ -111,9 +106,9 @@ export default async function Home() {
       </section>
 
       <section className="section">
-        <div className="sectionHead"><div><p className="eyebrow">MAKERS</p><h2>メーカーから探す</h2></div></div>
+        <div className="sectionHead"><div><p className="eyebrow">POPULAR MODELS</p><h2>人気車種から探す</h2></div></div>
         <div className="heroActions">
-          {MAKERS.map((m) => <a key={m} className="secondary buttonLink" href={`/bikes?maker=${encodeURIComponent(m)}`}>{m}</a>)}
+          {POPULAR_MODELS.map((m) => <a key={m} className="secondary buttonLink" href={`/bikes?keyword=${encodeURIComponent(m)}`}>{m}</a>)}
         </div>
       </section>
 
