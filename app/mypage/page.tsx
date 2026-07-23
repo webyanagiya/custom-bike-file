@@ -22,6 +22,15 @@ export default async function MyPage() {
   const nickname = profile?.nickname ?? "unknown";
   const summaryLine = [profile?.prefecture, profile?.favorite_genre].filter(Boolean).join(" / ");
 
+  const bikeIds = (bikeRows ?? []).map((b: any) => b.id);
+  const { data: photoRows } = bikeIds.length > 0
+    ? await supabase.from("bike_photos").select("bike_id, storage_path").in("bike_id", bikeIds).eq("sort_order", 0)
+    : { data: [] as { bike_id: string; storage_path: string }[] };
+
+  const thumbnailByBike = new Map(
+    (photoRows ?? []).map((p) => [p.bike_id, supabase.storage.from("bike-photos").getPublicUrl(p.storage_path).data.publicUrl]),
+  );
+
   const mine = (bikeRows ?? []).map((b: any) => ({
     id: b.id,
     maker: b.maker,
@@ -35,6 +44,7 @@ export default async function MyPage() {
     views: b.views,
     owner: nickname,
     customPoint: b.custom_point ?? "",
+    thumbnailUrl: thumbnailByBike.get(b.id),
   }));
 
   return (
@@ -57,7 +67,7 @@ export default async function MyPage() {
         {mine.length === 0 ? (
           <p className="intro">まだ投稿がありません。</p>
         ) : (
-          <div className="grid">{mine.map((b, i) => <MyBikeCard key={b.id} bike={b} index={i} />)}</div>
+          <div className="grid">{mine.map((b, i) => <MyBikeCard key={b.id} bike={b} index={i} thumbnailUrl={b.thumbnailUrl} />)}</div>
         )}
       </section>
     </main>

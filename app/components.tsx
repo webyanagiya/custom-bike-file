@@ -48,7 +48,7 @@ export function BikeCard({bike,index=0,thumbnailUrl}:{bike:(typeof bikeFiles)[nu
   </a>;
 }
 
-export function MyBikeCard({bike,index=0}:{bike:(typeof bikeFiles)[number],index?:number}){
+export function MyBikeCard({bike,index=0,thumbnailUrl}:{bike:(typeof bikeFiles)[number],index?:number,thumbnailUrl?:string}){
   const router=useRouter();
   const [busy,setBusy]=useState(false);
 
@@ -73,7 +73,7 @@ export function MyBikeCard({bike,index=0}:{bike:(typeof bikeFiles)[number],index
   }
 
   return <div>
-    <BikeCard bike={bike} index={index}/>
+    <BikeCard bike={bike} index={index} thumbnailUrl={thumbnailUrl}/>
     <div className="manageButtons">
       <button type="button" disabled={busy} onClick={()=>router.push(`/mypage/${bike.id}/edit`)}>編集</button>
       <button type="button" disabled={busy} onClick={()=>router.push(`/mypage/${bike.id}/sell`)}>売ります設定</button>
