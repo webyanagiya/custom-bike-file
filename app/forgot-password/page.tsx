@@ -1,13 +1,10 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
 
-export default function LoginPage() {
-  const router = useRouter();
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -15,31 +12,33 @@ export default function LoginPage() {
     event.preventDefault();
     setSubmitting(true);
     setMessage("");
+
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
     setSubmitting(false);
+
     if (error) {
-      setMessage("ログインに失敗しました。メールアドレスとパスワードを確認してください。");
+      setMessage(`送信に失敗しました：${error.message}`);
       return;
     }
-    router.push("/mypage");
-    router.refresh();
+
+    setMessage("パスワード再設定用のメールを送信しました。メール内のリンクから新しいパスワードを設定してください。");
   }
 
   return (
     <main className="subPage">
       <header className="subHeader"><a className="brand" href="/">CUSTOM BIKE FILE</a><a href="/">トップへ戻る</a></header>
       <section className="authCard">
-        <p className="eyebrow">MEMBER LOGIN</p>
-        <h1>ログイン</h1>
+        <p className="eyebrow">RESET PASSWORD</p>
+        <h1>パスワードをお忘れの方</h1>
         <form onSubmit={submit}>
           <label>メールアドレス<input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="mail@example.com" /></label>
-          <label>パスワード<input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" /></label>
-          <button className="primary" type="submit" disabled={submitting}>{submitting ? "ログイン中…" : "ログインする"}</button>
+          <button className="primary" type="submit" disabled={submitting}>{submitting ? "送信中…" : "再設定メールを送信する"}</button>
         </form>
         {message && <p className="formMessage">{message}</p>}
-        <p><a href="/forgot-password">パスワードを忘れた方はこちら</a></p>
-        <p>アカウントをお持ちでない方は <a href="/signup">無料登録へ</a></p>
+        <p><a href="/login">ログイン画面へ戻る</a></p>
       </section>
     </main>
   );
